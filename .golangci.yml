@@ -108,3 +108,5 @@ issues:
         - goconst
         - dupl
         - goerr113
+        - staticcheck
+        - gocritic
