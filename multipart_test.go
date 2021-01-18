@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/matryer/is"
+	//"github.com/stretchr/testify/require"
 )
 
 func TestWithClient(t *testing.T) {
@@ -62,6 +63,7 @@ func TestDoUseMultipartForm(t *testing.T) {
 	is.Equal(calls, 1) // calls
 	is.Equal(responseData["something"], "yes")
 }
+
 func TestImmediatelyCloseReqBody(t *testing.T) {
 	is := is.New(t)
 	var calls int
@@ -226,7 +228,6 @@ func TestQuery(t *testing.T) {
 	is.Equal(calls, 1)
 
 	is.Equal(resp.Value, "some data")
-
 }
 
 func TestFile(t *testing.T) {
