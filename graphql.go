@@ -31,7 +31,9 @@
 package graphql
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -145,4 +147,40 @@ type File struct {
 	Field string
 	Name  string
 	R     io.Reader
+}
+
+func (c *Client) Do(ctx context.Context, r *http.Request, gr *graphResponse) error {
+	c.logf(">> headers: %v", r.Header)
+
+	r = r.WithContext(ctx)
+
+	res, err := c.httpClient.Do(r)
+	if err != nil {
+		return err
+	}
+
+	defer res.Body.Close()
+
+	var buf bytes.Buffer
+
+	if _, err := io.Copy(&buf, res.Body); err != nil {
+		return errors.Wrap(err, "reading body")
+	}
+
+	c.logf("<< %s", buf.String())
+
+	if err := json.NewDecoder(&buf).Decode(&gr); err != nil {
+		if res.StatusCode != http.StatusOK {
+			return fmt.Errorf("graphql: server returned a non-200 status code: %v", res.StatusCode) //nolint:goerr113
+		}
+
+		return errors.Wrap(err, "decoding response")
+	}
+
+	if len(gr.Errors) > 0 {
+		// return first error
+		return gr.Errors[0]
+	}
+
+	return nil
 }

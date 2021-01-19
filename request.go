@@ -93,8 +93,17 @@ func (req *Request) OperationsJSON() ([]byte, error) {
 func (req *Request) FileMap() string {
 	fileMap := ""
 	for i, file := range req.Files() {
-		fileMap += fmt.Sprintf(`{%d: [%s]}`, i+1, file.Field)
+		fileMap += fmt.Sprintf(`{"%d": ["%s"]}`, i+1, file.Field)
 	}
 
 	return fileMap
+}
+
+// CopyHeaders copies Request headers to http.Request.
+func (req Request) CopyHeaders(r *http.Request) {
+	for key, values := range req.Header {
+		for _, value := range values {
+			r.Header.Add(key, value)
+		}
+	}
 }
