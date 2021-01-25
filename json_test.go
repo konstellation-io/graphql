@@ -2,33 +2,30 @@ package graphql
 
 import (
 	"context"
+	"github.com/stretchr/testify/require"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
-
-	"github.com/matryer/is"
 )
 
 func TestDoJSON(t *testing.T) {
-	is := is.New(t)
-
 	var calls int
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		calls++
-		is.Equal(r.Method, http.MethodPost)
+		require.Equal(t, r.Method, http.MethodPost)
 		b, err := ioutil.ReadAll(r.Body)
-		is.NoErr(err)
-		is.Equal(string(b), `{"query":"query {}","variables":null}`+"\n")
+		require.NoError(t, err)
+		require.Equal(t, string(b), `{"query":"query {}","variables":null}`+"\n")
 		_, err = io.WriteString(w, `{
 			"data": {
 				"something": "yes"
 			}
 		}`)
-		is.NoErr(err)
+		require.NoError(t, err)
 	}))
 	defer srv.Close()
 
@@ -41,25 +38,23 @@ func TestDoJSON(t *testing.T) {
 	var responseData map[string]interface{}
 
 	err := client.Run(ctx, &Request{q: "query {}"}, &responseData)
-	is.NoErr(err)
-	is.Equal(calls, 1) // calls
-	is.Equal(responseData["something"], "yes")
+	require.NoError(t, err)
+	require.Equal(t, calls, 1) // calls
+	require.Equal(t, responseData["something"], "yes")
 }
 
 func TestDoJSONServerError(t *testing.T) {
-	is := is.New(t)
-
 	var calls int
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		calls++
-		is.Equal(r.Method, http.MethodPost)
+		require.Equal(t, r.Method, http.MethodPost)
 		b, err := ioutil.ReadAll(r.Body)
-		is.NoErr(err)
-		is.Equal(string(b), `{"query":"query {}","variables":null}`+"\n")
+		require.NoError(t, err)
+		require.Equal(t, string(b), `{"query":"query {}","variables":null}`+"\n")
 		w.WriteHeader(http.StatusInternalServerError)
 		_, err = io.WriteString(w, `Internal Server Error`)
-		is.NoErr(err)
+		require.NoError(t, err)
 	}))
 
 	defer srv.Close()
@@ -74,28 +69,26 @@ func TestDoJSONServerError(t *testing.T) {
 
 	err := client.Run(ctx, &Request{q: "query {}"}, &responseData)
 
-	is.Equal(calls, 1) // calls
-	is.Equal(err.Error(), "graphql: server returned a non-200 status code: 500")
+	require.Equal(t, calls, 1) // calls
+	require.Equal(t, err.Error(), "graphql: server returned a non-200 status code: 500")
 }
 
 func TestDoJSONBadRequestErr(t *testing.T) {
-	is := is.New(t)
-
 	var calls int
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		calls++
-		is.Equal(r.Method, http.MethodPost)
+		require.Equal(t, r.Method, http.MethodPost)
 		b, err := ioutil.ReadAll(r.Body)
-		is.NoErr(err)
-		is.Equal(string(b), `{"query":"query {}","variables":null}`+"\n")
+		require.NoError(t, err)
+		require.Equal(t, string(b), `{"query":"query {}","variables":null}`+"\n")
 		w.WriteHeader(http.StatusBadRequest)
 		_, err = io.WriteString(w, `{
 			"errors": [{
 				"message": "miscellaneous message as to why the the request was bad"
 			}]
 		}`)
-		is.NoErr(err)
+		require.NoError(t, err)
 	}))
 
 	defer srv.Close()
@@ -110,22 +103,20 @@ func TestDoJSONBadRequestErr(t *testing.T) {
 
 	err := client.Run(ctx, &Request{q: "query {}"}, &responseData)
 
-	is.Equal(calls, 1) // calls
-	is.Equal(err.Error(), "graphql: miscellaneous message as to why the the request was bad")
+	require.Equal(t, calls, 1) // calls
+	require.Equal(t, err.Error(), "graphql: miscellaneous message as to why the the request was bad")
 }
 
 func TestQueryJSON(t *testing.T) {
-	is := is.New(t)
-
 	var calls int
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		calls++
 		b, err := ioutil.ReadAll(r.Body)
-		is.NoErr(err)
-		is.Equal(string(b), `{"query":"query {}","variables":{"username":"matryer"}}`+"\n")
+		require.NoError(t, err)
+		require.Equal(t, string(b), `{"query":"query {}","variables":{"username":"matryer"}}`+"\n")
 		_, err = io.WriteString(w, `{"data":{"value":"some data"}}`)
-		is.NoErr(err)
+		require.NoError(t, err)
 	}))
 
 	defer srv.Close()
@@ -140,8 +131,8 @@ func TestQueryJSON(t *testing.T) {
 	req.Var("username", "matryer")
 
 	// check variables
-	is.True(req != nil)
-	is.Equal(req.vars["username"], "matryer")
+	require.True(t, req != nil)
+	require.Equal(t, req.vars["username"], "matryer")
 
 	var resp struct {
 		Value string
@@ -149,23 +140,21 @@ func TestQueryJSON(t *testing.T) {
 
 	err := client.Run(ctx, req, &resp)
 
-	is.NoErr(err)
-	is.Equal(calls, 1)
+	require.NoError(t, err)
+	require.Equal(t, calls, 1)
 
-	is.Equal(resp.Value, "some data")
+	require.Equal(t, resp.Value, "some data")
 }
 
 func TestHeader(t *testing.T) {
-	is := is.New(t)
-
 	var calls int
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		calls++
-		is.Equal(r.Header.Get("X-Custom-Header"), "123")
+		require.Equal(t, r.Header.Get("X-Custom-Header"), "123")
 
 		_, err := io.WriteString(w, `{"data":{"value":"some data"}}`)
-		is.NoErr(err)
+		require.NoError(t, err)
 	}))
 
 	defer srv.Close()
@@ -183,8 +172,8 @@ func TestHeader(t *testing.T) {
 	}
 
 	err := client.Run(ctx, req, &resp)
-	is.NoErr(err)
-	is.Equal(calls, 1)
+	require.NoError(t, err)
+	require.Equal(t, calls, 1)
 
-	is.Equal(resp.Value, "some data")
+	require.Equal(t, resp.Value, "some data")
 }
